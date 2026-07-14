@@ -184,8 +184,9 @@ def import_sample_data(db: Session, path: Path) -> int:
 
 
 def run_scrapers(source: Optional[str] = None) -> dict:
-    """Run enabled scrapers: OLX first, then sample fallback."""
+    """Run enabled scrapers: OLX, Uybor, then sample fallback."""
     from app.scrapers.olx import scrape_olx
+    from app.scrapers.uybor import scrape_uybor
 
     db = SessionLocal()
     results: dict[str, Any] = {}
@@ -195,6 +196,12 @@ def run_scrapers(source: Optional[str] = None) -> dict:
                 results["olx"] = scrape_olx(db, pages=3)
             except Exception as exc:
                 results["olx"] = {"error": str(exc)}
+
+        if source is None or source == "uybor":
+            try:
+                results["uybor"] = scrape_uybor(db, pages=3)
+            except Exception as exc:
+                results["uybor"] = {"error": str(exc)}
 
         if source is None or source == "sample":
             added = import_sample_data(db, BASE_DIR / "data" / "sample_listings.json")
@@ -210,7 +217,7 @@ def seed_sample_data() -> None:
         if db.query(Listing).first() is not None:
             return
         # Try real listings first; fall back to sample data if scraping fails.
-        run_scrapers(source="olx")
+        run_scrapers()
         if db.query(Listing).first() is None:
             import_sample_data(db, BASE_DIR / "data" / "sample_listings.json")
     finally:

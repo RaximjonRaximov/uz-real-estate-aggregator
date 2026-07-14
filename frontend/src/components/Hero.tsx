@@ -11,7 +11,7 @@ export function Hero({ regions }: { regions: RegionStat[] }) {
       <div className="space-y-6">
         <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-sm font-bold text-violet-600">
           <Zap size={14} className="text-amber-500" />
-          Haqiqiy OLX.uz ma'lumotlari bilan
+          Haqiqiy OLX.uz va uybor.uz ma'lumotlari bilan
         </div>
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-balance leading-[1.1]">
           O'zbekiston ko'chmas <span className="text-gradient">mulk narxlarini</span> kuzating
