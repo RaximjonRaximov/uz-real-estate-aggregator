@@ -143,6 +143,12 @@ class PriceBucket(BaseModel):
     count: int
 
 
+class TypeStat(BaseModel):
+    listing_type: str
+    count: int
+    avg_price_uzs: Optional[float] = None
+
+
 # --- DB helpers ---
 
 def get_db() -> Session:
@@ -178,19 +184,21 @@ def import_sample_data(db: Session, path: Path) -> int:
 
 
 def run_scrapers(source: Optional[str] = None) -> dict:
-    """Run enabled scrapers. For the MVP it loads sample data; real adapters can be added."""
+    """Run enabled scrapers: OLX first, then sample fallback."""
+    from app.scrapers.olx import scrape_olx
+
     db = SessionLocal()
     results: dict[str, Any] = {}
     try:
-        # Sample data is always available and idempotent
+        if source is None or source == "olx":
+            try:
+                results["olx"] = scrape_olx(db, pages=3)
+            except Exception as exc:
+                results["olx"] = {"error": str(exc)}
+
         if source is None or source == "sample":
             added = import_sample_data(db, BASE_DIR / "data" / "sample_listings.json")
             results["sample"] = {"added": added}
-
-        # Real scraping adapters can be registered here behind feature flags.
-        # Example:
-        # if source is None or source == "olx":
-        #     results["olx"] = scrape_olx(db)
     finally:
         db.close()
     return results
@@ -201,7 +209,10 @@ def seed_sample_data() -> None:
     try:
         if db.query(Listing).first() is not None:
             return
-        import_sample_data(db, BASE_DIR / "data" / "sample_listings.json")
+        # Try real listings first; fall back to sample data if scraping fails.
+        run_scrapers(source="olx")
+        if db.query(Listing).first() is None:
+            import_sample_data(db, BASE_DIR / "data" / "sample_listings.json")
     finally:
         db.close()
 
@@ -328,6 +339,26 @@ def stats_by_region(db: Session = Depends(get_db)):
                 count=count,
                 avg_price_uzs=round(float(avg_price), 2) if avg_price else None,
                 avg_area_sqm=round(float(avg_area), 2) if avg_area else None,
+            )
+        )
+    return sorted(out, key=lambda x: x.count, reverse=True)
+
+
+@app.get(f"{settings.api_prefix}/stats/by-type", response_model=List[TypeStat])
+def stats_by_type(db: Session = Depends(get_db)):
+    rows = (
+        db.query(Listing.listing_type, func.count(Listing.id), func.avg(Listing.price_uzs))
+        .filter(Listing.is_active == 1, Listing.listing_type.isnot(None))
+        .group_by(Listing.listing_type)
+        .all()
+    )
+    out = []
+    for listing_type, count, avg_price in rows:
+        out.append(
+            TypeStat(
+                listing_type=listing_type or "unknown",
+                count=count,
+                avg_price_uzs=round(float(avg_price), 2) if avg_price else None,
             )
         )
     return sorted(out, key=lambda x: x.count, reverse=True)
