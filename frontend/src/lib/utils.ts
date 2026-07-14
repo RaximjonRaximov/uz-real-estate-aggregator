@@ -6,6 +6,7 @@ export function formatPriceUZS(value?: number | null): string {
 
 export function formatPriceShort(value?: number | null): string {
   if (value == null || Number.isNaN(value)) return '—';
+  if (value === 0) return '0';
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)} mlrd`;
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} mln`;
   return `${(value / 1_000).toFixed(0)} ming`;

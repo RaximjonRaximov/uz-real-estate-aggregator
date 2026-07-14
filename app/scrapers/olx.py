@@ -191,7 +191,8 @@ def _parse_card(card: BeautifulSoup) -> dict[str, Any] | None:
         return None
 
     image_tag = card.find("img")
-    image_url = image_tag.get("src") if image_tag else None
+    raw_image = image_tag.get("src") if image_tag else None
+    image_url = raw_image if raw_image and not raw_image.startswith("/app/") else None
 
     price_info = _extract_price(card)
     if not price_info:

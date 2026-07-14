@@ -29,7 +29,7 @@ export function PriceChart({ buckets }: { buckets: PriceBucket[] }) {
               onMouseLeave={() => setHover(null)}
             />
             <div className="text-[9px] text-slate-500 text-center leading-tight whitespace-nowrap">
-              {formatPriceShort(b.min)}
+              {b.min === 0 ? '0' : formatPriceShort(b.min)}
             </div>
             {hover === i && (
               <div className="absolute bottom-full mb-2 z-10 glass px-3 py-2 rounded-lg text-xs font-semibold text-slate-700">
